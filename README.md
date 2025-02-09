@@ -77,7 +77,7 @@ Add this to your `claude_desktop_config.json`:
       "command": "npx",
       "args": [
         "-y",
-        "@hannesrudolph/mcp-ragdocs"
+        "@makafeli/mcp-ragdocs"
       ],
       "env": {
         "OPENAI_API_KEY": "",
