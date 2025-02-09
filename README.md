@@ -41,6 +41,16 @@ List all URLs currently waiting in the documentation processing queue. Shows pen
 ### run_queue
 Process and index all URLs currently in the documentation queue. Each URL is processed sequentially, with proper error handling and retry logic. Progress updates are provided as processing occurs. Long-running operations will process until the queue is empty or an unrecoverable error occurs.
 
+**Modifications:**
+The `run_queue` tool has been modified to include a retry mechanism with increasing sleep durations between retries. This helps mitigate timeout issues when processing URLs that take a long time to fetch or process. The tool will now:
+
+1.  Attempt to process a URL from the queue.
+2.  If a timeout error occurs, it will wait for an initial delay (1 second).
+3.  Retry processing the URL.
+4.  If it times out again, it will increase the delay (by 1 second each time).
+5.  It will continue retrying and increasing the delay up to a maximum of 10 seconds.
+6.  If the URL still fails to process after multiple retries with the maximum delay, it will be marked as failed, and the tool will move on to the next URL in the queue.
+
 ### clear_queue
 Remove all pending URLs from the documentation processing queue. Use this to reset the queue when you want to start fresh, remove unwanted URLs, or cancel pending processing. This operation is immediate and permanent - URLs will need to be re-added if you want to process them later.
 

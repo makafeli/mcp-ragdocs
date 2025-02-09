@@ -14,6 +14,11 @@ const __dirname = path.dirname(__filename);
 const QUEUE_FILE = path.join(__dirname, '..', '..', 'queue.txt');
 
 export class RunQueueTool extends BaseTool {
+  // Helper function for sleeping
+  private sleep(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
   private apiClient: ApiClient;
   private addDocHandler: AddDocumentationHandler;
 
@@ -62,6 +67,7 @@ export class RunQueueTool extends BaseTool {
 
       while (true) {
         // Read current queue
+        let sleepDuration = 1000;
         const content = await fs.readFile(QUEUE_FILE, 'utf-8');
         const urls = content.split('\n').filter(url => url.trim() !== '');
 
@@ -72,13 +78,31 @@ export class RunQueueTool extends BaseTool {
         const currentUrl = urls[0]; // Get first URL
         
         try {
-          // Process the URL using the handler
-          await this.addDocHandler.handle({ url: currentUrl });
+          // Process the URL using the handler, explicitly typing the parameter
+          await this.addDocHandler.handle({ url: currentUrl as string });
+          // Reset sleep duration on success
+          sleepDuration = 1000; 
           processedCount++;
         } catch (error) {
-          failedCount++;
-          failedUrls.push(currentUrl);
-          console.error(`Failed to process URL ${currentUrl}:`, error);
+          if (error instanceof McpError && error.message.includes('Request timed out')) {
+            console.log(
+              `Timeout processing ${currentUrl}, retrying with ${sleepDuration / 1000}s delay...`
+            );
+            await this.sleep(sleepDuration);
+            sleepDuration += 1000; // Increase sleep for next retry
+            if (sleepDuration > 10000) {
+              console.error(
+                `Failed to process ${currentUrl} after multiple retries.`
+              );
+        failedCount++;
+        failedUrls.push(currentUrl);
+              sleepDuration = 1000; //reset duration
+            }
+          } else {
+            failedCount++;
+            failedUrls.push(currentUrl);
+           console.error(`Failed to process URL ${currentUrl}:`, error);
+          }
         }
 
         // Remove the processed URL from queue
